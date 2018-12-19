@@ -135,6 +135,12 @@ dataset_dir = 'D:/Develop/data/raccoon_dataset/'
 VOC_2007_images_dir = dataset_dir + 'images/'
 VOC_2007_annotations_dir = dataset_dir + 'annotations/'
 VOC_2007_test_image_set_filename = dataset_dir + 'data/test.txt'
+with open(VOC_2007_test_image_set_filename, 'rt') as fp:
+    lines = fp.readlines()
+    test_list = []
+    for line in lines:
+        line = line.strip()
+        test_list.append(line)
 
 dataset.parse_xml(images_dirs=[VOC_2007_images_dir],
                   image_set_filenames=[VOC_2007_test_image_set_filename],
@@ -159,59 +165,60 @@ generator = dataset.generate(batch_size=BATCH_SIZE,
                                       'original_labels'},
                              keep_images_without_gt=False)
 
-# Generate a batch and make predictions.
 
-batch_images, batch_filenames, batch_inverse_transforms, batch_original_images, batch_original_labels = next(generator)
-
-i = 0 # Which batch item to look at
-for i in range(BATCH_SIZE):
-    print("Image:", batch_filenames[i])
-    print()
-    print("Ground truth boxes:\n")
-    print(np.array(batch_original_labels[i]))
+for ite in range(len(test_list) // BATCH_SIZE):
+    # Generate a batch and make predictions.
     
-    # Predict.
-    
-    y_pred = model.predict(batch_images)
-    
-    confidence_threshold = 0.5
-    
-    # Perform confidence thresholding.
-    y_pred_thresh = [y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])]
-    
-    # Convert the predictions for the original image.
-    y_pred_thresh_inv = apply_inverse_transforms(y_pred_thresh, batch_inverse_transforms)
-    
-    np.set_printoptions(precision=2, suppress=True, linewidth=90)
-    print("Predicted boxes:\n")
-    print('   class   conf xmin   ymin   xmax   ymax')
-    print(y_pred_thresh_inv[i])
-    
-    # Display the image and draw the predicted boxes onto it.
-    
-    # Set the colors for the bounding boxes
-    colors = plt.cm.hsv(np.linspace(0, 1, 21)).tolist()
-    
-    plt.figure(figsize=(20,12))
-    plt.imshow(batch_original_images[i])
-    
-    current_axis = plt.gca()
-    
-    for box in batch_original_labels[i]:
-        xmin = box[1]
-        ymin = box[2]
-        xmax = box[3]
-        ymax = box[4]
-        label = '{}'.format(classes[int(box[0])])
-        current_axis.add_patch(plt.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, color='green', fill=False, linewidth=2))  
-        current_axis.text(xmin, ymin, label, size='x-large', color='white', bbox={'facecolor':'green', 'alpha':1.0})
-    
-    for box in y_pred_thresh_inv[i]:
-        xmin = box[2]
-        ymin = box[3]
-        xmax = box[4]
-        ymax = box[5]
-        color = colors[int(box[0])]
-        label = '{}: {:.2f}'.format(classes[int(box[0])], box[1])
-        current_axis.add_patch(plt.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, color=color, fill=False, linewidth=2))  
-        current_axis.text(xmin, ymin, label, size='x-large', color='white', bbox={'facecolor':color, 'alpha':1.0})
+    batch_images, batch_filenames, batch_inverse_transforms, batch_original_images, batch_original_labels = next(generator)
+    i = 0 # Which batch item to look at
+    for i in range(BATCH_SIZE):
+        print("Image:", batch_filenames[i])
+        print()
+        print("Ground truth boxes:\n")
+        print(np.array(batch_original_labels[i]))
+        
+        # Predict.
+        
+        y_pred = model.predict(batch_images)
+        
+        confidence_threshold = 0.5
+        
+        # Perform confidence thresholding.
+        y_pred_thresh = [y_pred[k][y_pred[k,:,1] > confidence_threshold] for k in range(y_pred.shape[0])]
+        
+        # Convert the predictions for the original image.
+        y_pred_thresh_inv = apply_inverse_transforms(y_pred_thresh, batch_inverse_transforms)
+        
+        np.set_printoptions(precision=2, suppress=True, linewidth=90)
+        print("Predicted boxes:\n")
+        print('   class   conf xmin   ymin   xmax   ymax')
+        print(y_pred_thresh_inv[i])
+        
+        # Display the image and draw the predicted boxes onto it.
+        
+        # Set the colors for the bounding boxes
+        colors = plt.cm.hsv(np.linspace(0, 1, 21)).tolist()
+        
+        plt.figure(figsize=(20,12))
+        plt.imshow(batch_original_images[i])
+        
+        current_axis = plt.gca()
+        
+        for box in batch_original_labels[i]:
+            xmin = box[1]
+            ymin = box[2]
+            xmax = box[3]
+            ymax = box[4]
+            label = '{}'.format(classes[int(box[0])])
+            current_axis.add_patch(plt.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, color='green', fill=False, linewidth=2))  
+            current_axis.text(xmin, ymin, label, size='x-large', color='white', bbox={'facecolor':'green', 'alpha':1.0})
+        
+        for box in y_pred_thresh_inv[i]:
+            xmin = box[2]
+            ymin = box[3]
+            xmax = box[4]
+            ymax = box[5]
+            color = colors[int(box[0])]
+            label = '{}: {:.2f}'.format(classes[int(box[0])], box[1])
+            current_axis.add_patch(plt.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, color=color, fill=False, linewidth=2))  
+            current_axis.text(xmin, ymin, label, size='x-large', color='white', bbox={'facecolor':color, 'alpha':1.0})
